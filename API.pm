@@ -10,6 +10,7 @@ use JSON::XS;
 use LWP;
 
 use Data::Dumper;
+use Carp;
 
 use constant URI => 'https://www.pcs-isaac.co.uk/wsPCS.asmx/';
 
@@ -60,6 +61,19 @@ sub AUTOLOAD
     my $json = new JSON::XS;
     my $result = $json->utf8->pretty->canonical->decode($content);
     return $result;
+}
+
+sub Xdownload_paperwork
+{
+    my $self = shift;
+    my %params = @_;
+    my $string = getstring %params;
+    my $url = URI . "Download_Paperwork?APIToken=$self->{apitoken}$string";
+    say $url;
+    my $ua = new LWP::UserAgent;
+    my $response = $ua->get($url);
+    say $response->code, " ", $response->message;
+    return $response->content;
 }
 
 1;
