@@ -9,6 +9,7 @@ use SOAP::Simple;
 use LWP;
 
 use Data::Dumper;
+$Data::Dumper::Deparse = 1;
 
 use constant {
     URL	    => q(https://www.pcs-isaac.co.uk/PCSWeb.asmx?WSDL),
@@ -21,11 +22,13 @@ sub new
     my $token = shift;
     my $live = shift;
     my $ua = new LWP::UserAgent;
+    $ua->proxy(['http','https'], 'http://localhost:8888/');
     my $url = $live ? URL : TESTURL;
-    my $response = $ua->get(URL);
+    my $response = $ua->get($url);
     my $wsdl = new SOAP::Simple(
 	wsdl => $response->decoded_content,
 	port => 'PCSWebSoap',
+	useragent => $ua,
     );
     my $self = {
 	wsdl	=> $wsdl,
@@ -42,7 +45,7 @@ sub AUTOLOAD
     $params{Auth}{APIToken} = $self->{token};
     my $wsdl = $self->{wsdl};
     my $result =  $wsdl->$name(%params);
-    return $result;
+    return $result->{parameters};
 }
 
 sub DESTROY {}

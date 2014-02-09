@@ -1,164 +1,120 @@
 package PCS::API;
 
+use base PCS::WSDL;
+
 use strict;
 use warnings;
 use 5.14.0;
 use utf8;
 
-use XML::Simple;
-use JSON::XS;
-use LWP;
-use URI::Escape;
-use Hash::Case::Lower;
-use MIME::Base64 qw(encode_base64url encode_base64);
-use Fcntl;
-use Encode;
+use MIME::Base64 qw(decode_base64 encode_base64);
+use File::Basename qw(basename);
+use File::Spec;
 
 use Data::Dumper;
 use Carp;
 
-use constant URI => 'https://www.pcs-isaac.co.uk/wsPCS.asmx/';
+use CouchDB::Lite::Boolean;
 
-
-sub new
+sub jobtypes
 {
-    my $class = shift;
-    my $apitoken = shift;
-    my $jobtype = shift;
-    my $self = {
-	apitoken    => $apitoken,
-	jobtype	    => $jobtype,
-    };
-    bless $self, $class;
+    my $self = shift;
+    my $response = $self->Get_Job_Types;
+    my $types = $response->{Get_Job_TypesResult}{JobType};
+    my %jobs = map { $_->{JobTypeName} => $_->{JobTypeID}  } @$types;
+    return %jobs;
 }
 
-sub DESTROY { }
-
-sub getstring
+# Returns ID
+sub instruct
 {
     my $self = shift;
     local $_;
-    tie my %params, 'Hash::Case::Lower';
-    %params = @_;
-    my $string = '';
-    foreach (keys %params)
+    my ($params, @files) = @_;
+    my $appointment = $params->{appointment};
+    my %details = (
+	JobTypeID   => $params->{jobtype},
+	cTitle	    => $params->{title},
+	cFirstName  => $params->{first_name},
+	cLastName   => $params->{surname},
+	cPhone1	    => $params->{telephone},
+	cPhone2	    => $params->{mobile},
+	cEmail1	    => $params->{email},
+	cAddress1   => $params->{address1},
+	cAddress2   => $params->{address2},
+	cAddress3   => $params->{town},
+	cPostcode   => $params->{postcode},
+	apptDate    => $appointment->strftime('%d/%m/%Y'),
+	apptHour    => $appointment->hour,
+	apptMin	    => $appointment->min,
+	referenceNo => $params->{id},
+	useAltAddress => false,
+	claimCount  => 0,
+    );
+    my @attachments;
+    foreach my $file (@files)
     {
-	(my $key = $_) =~ s/^./\u$&/;
-	$key =~ s/(?<=_)\w/\u$&/g;
-	$string .= '&' . uri_escape($key) . '=' . uri_escape($params{$_});
-    }
-    $string = "?APIToken=$self->{apitoken}$string";
-    return $string;
-}
-
-sub AUTOLOAD
-{
-    my $self = shift;
-    my %params = @_;
-    (my $name = our $AUTOLOAD) =~ s/.*:://;
-    $name =~ s/^./\u$&/;
-    $name =~ s/(?<=_)\w/\u$&/g;
-    if ($name =~ /^instruct_appointment$/i)
-    {
-	my @optional = qw(
-	Customer_Email_Address_2 
-	Appointment_Address_Line_3 
-	Appointment_Address_Line_4 
-	Appointment_Alternate_Address_Line_1
-	Appointment_Alternate_Address_Line_2
-	Appointment_Alternate_Address_Line_3
-	Appointment_Alternate_Address_Line_4
-	Appointment_Alternate_Address_Postcode
-	Appointment_Instructions 
-	Appointment_Reference_Number 
+	open my $hand, '<raw:', $file or croak "Can't open $file: $!";
+	local $/;
+	my $contents = <$hand>;
+	my %attachment = (
+	    FileName	=> basename($file),
+	    FileData	=> encode_base64($contents, ''),
 	);
-	my %optional = map { $_ => '' } @optional;
-	$optional{Appointment_Alternate_Address} = 'No';
-	%params = ( %optional, %params );
+	push @attachments, \%attachment;
     }
-    my $string = $self->getstring(%params);
-    my $url = URI . "$name$string";
-    #say $url;
-    my $ua = new LWP::UserAgent;
-    my $response = $ua->get($url);
-    #say '---  ', $response->code, " ", $response->message;
-    croak $response->decoded_content unless $response->is_success;
-    my $xml = new XML::Simple;
-    my $content = $xml->XMLin($response->decoded_content)->{content};
-    my $json = new JSON::XS;
-    my $result = $json->utf8->decode($content);
-    return $result;
+    my @instruction = (
+	Details	    => \%details,
+	Attachments => { CaseFile => \@attachments },
+    );
+    my $result = $self->Instruct_Appointment(@instruction);
+    my @response = split /:/, $result->{Instruct_AppointmentResult};
+    croak "$result" unless $response[0] eq 'OK';
+    return $response[1];
 }
 
+# Returns the number of files downloaded
 sub download_paperwork
 {
     my $self = shift;
-    my %params = @_;
-    my $string = $self->getstring(%params);
-    my $url = URI . "Download_Paperwork$string";
-    #say $url;
-    my $ua = new LWP::UserAgent;
-    my $response = $ua->get($url);
-    croak $response->decoded_content unless $response->is_success;
-    return {
-	filename    => $response->filename,
-	file	    => $response->content,
-    };
-}
-
-sub upload_case_paperwork
-{
-    my $self = shift;
-    my %params = @_;
-    my $filename = $params{filename};
-    my $file;
+    my $id = shift // croak 'No ID';
+    my $path = shift;
+    croak "Not a directory: $path" unless -d $path;
+    my $result = $self->Download_Paperwork(CaseNumber => $id);
+    my @files = @{$result->{Download_PaperworkResult}{Paperwork}};
+    my $count = 0;
+    foreach my $file (@files)
     {
-	local $/;
-	open my $hand, $filename or croak "Open $filename: $!";
-	$file = <$hand>;
+	next unless $file->{PaperworkType} eq 'ATTACHED';
+	my $filename = File::Spec->catfile($path, $file->{FileName});
+	open my $hand, '>raw:', $filename or croak "Can't open $filename: $!";
+	print $hand decode_base64($file->{FileData});
 	close $hand;
+	$count++;
     }
-    my $string = $self->getstring(%params);
-    my $url = URI . "Upload_Case_Paperwork";
-    #my $url = URI . "Upload_Case_Paperwork$string";
-    say $url;
-    $params{fileByte} = encode_base64($file, '');
-    $string = $self->getstring(%params);
-    my $ua = new LWP::UserAgent;
-    #my $response = $ua->get($url);
-    #return $response->decoded_content;
-    my $response = $ua->post($url,
-	Content => substr $string, 1
-#	[
-#	    APIToken => $self->{apitoken},
-#	    Case_Number => $params{case_number},
-#	    fileByte => encode_base64($file, ''),
-#	    Filename => $filename,
-#	],
-##	Filename => $filename,
-    );
-    say Dumper $response; exit;
-    say '---  ', $response->code, " ", $response->message;
-    return $response->decoded_content;
+    return $count;
 }
 
-sub upload_paperwork
+# No return value: croaks on error.
+sub cancel
 {
     my $self = shift;
-    my $filename = shift;
-    #my $url = URI . 'upload-paperwork.aspx';
-    my $url = 'https://www.pcs-isaac.co.uk/upload-paperwork.aspx';
-    my $ua = new LWP::UserAgent;
-    my $response = $ua->post($url,
-	[
-	    fileByte => [$filename],
-	    FileName => $filename,
-	    Content_Type => 'application/pdf',
-	],
-	Content_Type => 'form-data',
-    );
-    print $response->request->headers->as_string, "\n", $response->request->content;
-    return $response->decoded_content;
+    my $id = shift;
+    my $result = $self->Cancel_Appointment(CaseNumber => $id);
+    $result = $result->{Cancel_AppointmentResult};
+    croak $result->{Status} unless $result->{Status} eq 'OK';
 }
+
+sub get_case
+{
+    my $self = shift;
+    my $id = shift;
+    my $result = $self->Search_Cases(Query => {
+	    Mode    => 1,
+	    Term    => $id,
+	}
+    );
+}
+
 
 1;
