@@ -22,13 +22,11 @@ sub new
     my $token = shift;
     my $live = shift;
     my $ua = new LWP::UserAgent;
-    $ua->proxy(['http','https'], 'http://localhost:8888/');
     my $url = $live ? URL : TESTURL;
     my $response = $ua->get($url);
     my $wsdl = new SOAP::Simple(
 	wsdl => $response->decoded_content,
 	port => 'PCSWebSoap',
-	useragent => $ua,
     );
     my $self = {
 	wsdl	=> $wsdl,

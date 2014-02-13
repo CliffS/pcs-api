@@ -121,30 +121,21 @@ sub search
 	Mode    => $mode,
 	Term    => $term,
     );
-    if ($from)
-    {
-	if (ref $from && $from->isa('DateTime'))
-	{
-	    $query{ApptFrom} = $from->strftime('%d/%m/%Y %H:%M:%S');
-	}
-	else {
-	    $query{ApptFrom} = $from;
-	}
-	if ($to)
-	{
-	    if (ref $to && $to->isa('DateTime'))
-	    {
-		$query{ApptTo} = $to->strftime('%d/%m/%Y %H:%M:%S');
-	    }
-	    else {
-		$query{ApptTo} = $to;
-	    }
-	}
-    }
+# Code removed as it doesn't work at the PCS end
+#    if ($from)
+#    {
+#	$query{ApptFrom} = $from->strftime('%d/%m/%Y %H:%M:%S');
+#	$query{ApptTo} = $to->strftime('%d/%m/%Y %H:%M:%S') if $to;
+#    }
     my $result = $self->Search_Cases(Query => \%query);
     my $cases = $result->{Search_CasesResult}{SearchResults};
     my @cases;
     push @cases, new PCS::Case($_) foreach @$cases;
+    if ($from)
+    {
+	@cases = grep { $_->appointment >= $from } @cases;
+	@cases = grep { $_->appointment <= $to } @cases if $to;
+    }
     return @cases;
 }
 
@@ -166,22 +157,42 @@ sub get_by_status
 sub get_complete
 {
     my $self = shift;
-    my $from = shift;
-    my @cases = $self->get_by_status('COMPLETE', $from);
+    my @cases = $self->get_by_status('COMPLETE', @_);
     return @cases;
 }
 
 sub get_pending
 {
     my $self = shift;
-    my $from = shift;
     my @cases;
-    foreach (qw{TBA ALLOCATED})
+    foreach (qw{TBA ALLOCATED PROBLEM})
     {
-	push @cases, $self->get_by_status($_, $from);
+	push @cases, $self->get_by_status($_, @_);
     }
     return sort byappointment @cases;
 }
 
+sub get_signed
+{
+    my $self = shift;
+    my @cases;
+    foreach (qw{SIGNED UPLOADED COMPLETE})
+    {
+	push @cases, $self->get_by_status($_, @_);
+    }
+    return sort byappointment @cases;
+}
+
+sub get_failed
+{
+    my $self = shift;
+    my @cases;
+    foreach (qw{CANX_AT CANX_B4_<60MINS CANX_B4_>60MINS REFUSED})
+    {
+	s/_/ /g;
+	push @cases, $self->get_by_status($_, @_);
+    }
+    return sort byappointment @cases;
+}
 
 1;
