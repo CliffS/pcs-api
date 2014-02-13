@@ -7,6 +7,7 @@ use utf8;
 
 use DateTime;
 use DateTime::Format::Strptime;
+use Carp;
 
 sub new
 {
@@ -15,7 +16,7 @@ sub new
     my $strp = new DateTime::Format::Strptime(
 	pattern	    => '%d/%m/%Y %H:%M:%S',
 	locale	    => 'en_GB',
-	timezone    => #Europe/London',
+	time_zone   => 'Europe/London',
 	on_error    => 'croak',
     );
     my $self = {
@@ -29,6 +30,16 @@ sub new
 	instructed  => $strp->parse_datetime($result->{InstructionDate}),
     };
     bless $self, $class;
+}
+
+sub dump
+{
+    my $self = shift;
+    foreach (sort keys %$self)
+    {
+	printf "%-15s: %s\n", $_, $self->{$_};
+    }
+    say "";
 }
 
 sub AUTOLOAD

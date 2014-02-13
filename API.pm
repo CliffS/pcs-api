@@ -15,6 +15,14 @@ use Data::Dumper;
 use Carp;
 
 use CouchDB::Lite::Boolean;
+use PCS::Case;
+
+use enum qw{NONE CASE REF INSTRUCTOR NAME POSTCODE STATUS};
+
+sub byappointment
+{
+    $a->appointment <=> $b->appointment;
+}
 
 sub jobtypes
 {
@@ -105,15 +113,74 @@ sub cancel
     croak $result->{Status} unless $result->{Status} eq 'OK';
 }
 
+sub search
+{
+    my $self = shift;
+    my ($mode, $term, $from, $to) = @_;
+    my %query = (
+	Mode    => $mode,
+	Term    => $term,
+    );
+    if ($from)
+    {
+	if (ref $from && $from->isa('DateTime'))
+	{
+	    $query{ApptFrom} = $from->strftime('%d/%m/%Y %H:%M:%S');
+	}
+	else {
+	    $query{ApptFrom} = $from;
+	}
+	if ($to)
+	{
+	    if (ref $to && $to->isa('DateTime'))
+	    {
+		$query{ApptTo} = $to->strftime('%d/%m/%Y %H:%M:%S');
+	    }
+	    else {
+		$query{ApptTo} = $to;
+	    }
+	}
+    }
+    my $result = $self->Search_Cases(Query => \%query);
+    my $cases = $result->{Search_CasesResult}{SearchResults};
+    my @cases;
+    push @cases, new PCS::Case($_) foreach @$cases;
+    return @cases;
+}
+
 sub get_case
 {
     my $self = shift;
     my $id = shift;
-    my $result = $self->Search_Cases(Query => {
-	    Mode    => 1,
-	    Term    => $id,
-	}
-    );
+    my @cases = $self->search(CASE, $id);
+    croak "More than one case returned: $id" if @cases > 1;
+    return shift @cases;
+}
+
+sub get_by_status
+{
+    my $self = shift;
+    return $self->search(STATUS, @_);
+}
+
+sub get_complete
+{
+    my $self = shift;
+    my $from = shift;
+    my @cases = $self->get_by_status('COMPLETE', $from);
+    return @cases;
+}
+
+sub get_pending
+{
+    my $self = shift;
+    my $from = shift;
+    my @cases;
+    foreach (qw{TBA ALLOCATED})
+    {
+	push @cases, $self->get_by_status($_, $from);
+    }
+    return sort byappointment @cases;
 }
 
 
