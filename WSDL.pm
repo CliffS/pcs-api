@@ -9,9 +9,6 @@ use SOAP::Simple;
 use LWP;
 use Carp;
 
-use Data::Dumper;
-$Data::Dumper::Deparse = 1;
-
 use constant {
     URL	    => q(https://www.pcs-isaac.co.uk/PCSWeb.asmx?WSDL),
     TESTURL => q(http://test.pcs-isaac.co.uk/PCSWeb.asmx?WSDL),
