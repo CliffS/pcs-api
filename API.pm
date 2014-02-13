@@ -1,6 +1,6 @@
 package PCS::API;
 
-use base PCS::WSDL;
+use parent PCS::WSDL;
 
 use strict;
 use warnings;

@@ -7,6 +7,7 @@ use utf8;
 
 use SOAP::Simple;
 use LWP;
+use Carp;
 
 use Data::Dumper;
 $Data::Dumper::Deparse = 1;
@@ -38,8 +39,14 @@ sub new
 sub AUTOLOAD
 {
     my $self = shift;
+    our $AUTOLOAD;
+    { # Only allow to be called by subclasses (protected)
+	my $caller = caller . '::ISA';
+	no strict 'refs';
+	croak "Unknown method $AUTOLOAD" unless grep {__PACKAGE__} @$caller;
+    }
     my %params = @_;
-    (my $name = our $AUTOLOAD) =~ s/.*:://;
+    (my $name = $AUTOLOAD) =~ s/.*:://;
     $params{Auth}{APIToken} = $self->{token};
     my $wsdl = $self->{wsdl};
     my $result =  $wsdl->$name(%params);
