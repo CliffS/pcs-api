@@ -59,6 +59,7 @@ sub instruct
 	useAltAddress => false,
 	claimCount  => 0,
     );
+    $details{specialInstruction} = $params->{comment} if $params->{comment};
     my @attachments;
     foreach my $file (@files)
     {
@@ -77,7 +78,7 @@ sub instruct
     );
     my $result = $self->Instruct_Appointment(@instruction);
     my @response = split /:/, $result->{Instruct_AppointmentResult};
-    croak $result->{Instruct_AppointmentResult} unless $response[0] eq 'OK';
+    croak "@response" unless $response[0] eq 'OK';
     return $self->get_case($response[1]);
 }
 
@@ -95,6 +96,7 @@ sub download_paperwork
     {
 	next unless $file->{PaperworkType} eq 'ATTACHED';
 	my $filename = File::Spec->catfile($path, $file->{FileName});
+	$filename =~ s/\.\w*$/\L$&/;
 	open my $hand, '>raw:', $filename or croak "Can't open $filename: $!";
 	print $hand decode_base64($file->{FileData});
 	close $hand;
