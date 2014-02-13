@@ -187,8 +187,9 @@ sub get_failed
 {
     my $self = shift;
     my @cases;
-    foreach (qw{CANX_AT CANX_B4_<60MINS CANX_B4_>60MINS REFUSED})
+    foreach (qw{CANX_AT CANX_B4<60 CANX_B4>60 REFUSED})
     {
+	local $_ = $_;
 	s/_/ /g;
 	push @cases, $self->get_by_status($_, @_);
     }
