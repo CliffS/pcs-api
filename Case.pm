@@ -35,7 +35,7 @@ sub new
 sub dump
 {
     my $self = shift;
-    printf "%-15s: %s\n", $_, $self->{$_} foreach (sort keys %$self);
+    printf "%-15s: %s\n", $_, $self->{$_} foreach sort keys %$self;
     say "";
 }
 

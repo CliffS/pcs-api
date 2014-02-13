@@ -150,6 +150,29 @@ sub get_case
     return shift @cases;
 }
 
+sub get_by_ref
+{
+    my $self = shift;
+    my $ref = shift;
+    my @cases = $self->search(REF, $ref, @_);
+    return sort byappointment @cases;
+}
+
+sub get_by_postcode
+{
+    my $self = shift;
+    my $postcode = shift;
+    my @cases = $self->search(POSTCODE, $postcode, @_);
+    return sort byappointment @cases;
+}
+
+sub get_all_cases
+{
+    my $self = shift;
+    my @cases = $self->search(NONE, undef, @_);
+    return sort byappointment @cases;
+}
+
 sub get_by_status
 {
     my $self = shift;
