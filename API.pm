@@ -77,8 +77,8 @@ sub instruct
     );
     my $result = $self->Instruct_Appointment(@instruction);
     my @response = split /:/, $result->{Instruct_AppointmentResult};
-    croak "$result" unless $response[0] eq 'OK';
-    return $response[1];
+    croak $result->{Instruct_AppointmentResult} unless $response[0] eq 'OK';
+    return $self->get_case($response[1]);
 }
 
 # Returns the number of files downloaded
