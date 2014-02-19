@@ -32,6 +32,18 @@ sub new
     bless $self, $class;
 }
 
+sub cancelled
+{
+    my $self = shift;
+    return $self->{status} =~ /^(CANX|REFUSED)/;
+}
+
+sub signed
+{
+    my $self = shift;
+    return $self->{status} =~ /^(SIGNED|UPLOADED|COMPLETE)$/;
+}
+
 sub dump
 {
     my $self = shift;
