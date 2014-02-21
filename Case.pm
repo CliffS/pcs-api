@@ -19,6 +19,12 @@ sub new
 	time_zone   => 'Europe/London',
 	on_error    => 'croak',
     );
+    my $formatter = new DateTime::Format::Strptime(
+	pattern   => '%e %b %Y at %H:%M',
+	locale	    => 'en_GB',
+	time_zone   => 'Europe/London',
+	on_error    => 'croak',
+    );	
     my $self = {
 	id	    => $result->{CaseNo},
 	name	    => $result->{CustomerName},
@@ -29,6 +35,8 @@ sub new
 	appointment => $strp->parse_datetime($result->{ApptDate}),
 	instructed  => $strp->parse_datetime($result->{InstructionDate}),
     };
+    $self->{appointment}->set_formatter($formatter);
+    $self->{instructed}->set_formatter($formatter);
     bless $self, $class;
 }
 
