@@ -34,6 +34,8 @@ sub new
 	instructor  => $result->{Instructor},
 	appointment => $strp->parse_datetime($result->{ApptDate}),
 	instructed  => $strp->parse_datetime($result->{InstructionDate}),
+	cost	    => $result->{Charge},
+	tracking    => $result->{TrackingNo},
     };
     $self->{appointment}->set_formatter($formatter);
     $self->{instructed}->set_formatter($formatter);
