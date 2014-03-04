@@ -8,11 +8,13 @@ use utf8;
 use DateTime;
 use DateTime::Format::Strptime;
 use Carp;
+use Data::Dumper;
 
 sub new
 {
     my $class = shift;
     my $result = shift;
+    # print Dumper $result; exit;
     my $strp = new DateTime::Format::Strptime(
 	pattern	    => '%d/%m/%Y %H:%M:%S',
 	locale	    => 'en_GB',
@@ -59,6 +61,12 @@ sub dump
     my $self = shift;
     printf "%-15s: %s\n", $_, $self->{$_} foreach sort keys %$self;
     say "";
+}
+
+sub jobtype
+{
+    my $self = shift;
+    return rand 2 > 1 ? 53 : 150;
 }
 
 sub AUTOLOAD

@@ -10,6 +10,7 @@ use utf8;
 use MIME::Base64 qw(decode_base64 encode_base64);
 use File::Basename qw(basename);
 use File::Spec;
+use Pristine::Utils qw(debug);
 
 use Data::Dumper;
 use Carp;
@@ -133,6 +134,7 @@ sub search
     my $cases = $result->{Search_CasesResult}{SearchResults};
     my @cases;
     push @cases, new PCS::Case($_) foreach @$cases;
+    my $count = @cases;
     if ($from)
     {
 	@cases = grep { $_->appointment >= $from } @cases;
