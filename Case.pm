@@ -14,7 +14,6 @@ sub new
 {
     my $class = shift;
     my $result = shift;
-    print Dumper $result; exit;
     my $strp = new DateTime::Format::Strptime(
 	pattern	    => '%d/%m/%Y %H:%M:%S',
 	locale	    => 'en_GB',
