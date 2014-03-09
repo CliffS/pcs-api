@@ -14,7 +14,7 @@ sub new
 {
     my $class = shift;
     my $result = shift;
-    # print Dumper $result; exit;
+    print Dumper $result; exit;
     my $strp = new DateTime::Format::Strptime(
 	pattern	    => '%d/%m/%Y %H:%M:%S',
 	locale	    => 'en_GB',
@@ -38,6 +38,8 @@ sub new
 	instructed  => $strp->parse_datetime($result->{InstructionDate}),
 	cost	    => $result->{Charge},
 	tracking    => $result->{TrackingNo},
+	jobtype	    => $result->{JobTypeID},
+	jobtype_name=> $result->{JobType},
     };
     $self->{appointment}->set_formatter($formatter);
     $self->{instructed}->set_formatter($formatter);
@@ -63,10 +65,22 @@ sub dump
     say "";
 }
 
-sub jobtype
+sub is_pending
 {
     my $self = shift;
-    return rand 2 > 1 ? 53 : 150;
+    return $self->status =~ /^(TBA|ALLOCATED|PROBLEM)$/;
+}
+
+sub is_signed
+{
+    my $self = shift;
+    return $self->status =~ /^(SIGNED|UPLOADED|COMPLETE)$/;
+}
+
+sub is_failed
+{
+    my $self = shift;
+    return $self->status =~ /^(CANX|REFUSED)/;
 }
 
 sub AUTOLOAD
