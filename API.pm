@@ -13,6 +13,7 @@ use File::Spec;
 use Pristine::Utils qw(debug);
 use Storable qw(freeze);
 
+use Data::Dumper;
 use Carp;
 
 use CouchDB::Lite::Boolean;
@@ -131,17 +132,18 @@ sub search
 #	$query{ApptTo} = $to->strftime('%d/%m/%Y %H:%M:%S') if $to;
 #    }
     state %cache;
-    my $ice = freeze \%query;
     my @cases;
-    if (exists $cache{$ice})
+    $term //= '-';
+    if (exists $cache{$mode}{$term})
     {
-	@cases = @{$cache{$ice}};
+	@cases = @{$cache{$mode}{$term}};
     }
     else {
 	my $result = $self->Search_Cases(Query => \%query);
 	my $cases = $result->{Search_CasesResult}{SearchResults};
 	push @cases, new PCS::Case($_) foreach @$cases;
-	$cache{$ice} = \@cases;
+	my @cache = @cases;
+	$cache{$mode}{$term} = \@cache;
     }
     my $count = @cases;
     if ($from)
@@ -230,6 +232,15 @@ sub get_failed
 	push @cases, $self->get_by_status($_, @_);
     }
     return sort byappointment @cases;
+}
+
+sub get_by_jobtype
+{
+    my $self = shift;
+    my $jobtype = shift;
+    my @cases = $self->get_all_cases(@_);
+    @cases = grep { $_->jobtype == $jobtype } @cases;
+    return @cases;
 }
 
 1;
