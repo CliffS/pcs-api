@@ -3,7 +3,7 @@ package PCS::API;
 use parent PCS::WSDL;
 
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 use 5.14.0;
 use utf8;
 
@@ -11,8 +11,8 @@ use MIME::Base64 qw(decode_base64 encode_base64);
 use File::Basename qw(basename);
 use File::Spec;
 use Pristine::Utils qw(debug);
+use Storable qw(freeze);
 
-use Data::Dumper;
 use Carp;
 
 use CouchDB::Lite::Boolean;
@@ -130,10 +130,19 @@ sub search
 #	$query{ApptFrom} = $from->strftime('%d/%m/%Y %H:%M:%S');
 #	$query{ApptTo} = $to->strftime('%d/%m/%Y %H:%M:%S') if $to;
 #    }
-    my $result = $self->Search_Cases(Query => \%query);
-    my $cases = $result->{Search_CasesResult}{SearchResults};
+    state %cache;
+    my $ice = freeze \%query;
     my @cases;
-    push @cases, new PCS::Case($_) foreach @$cases;
+    if (exists $cache{$ice})
+    {
+	@cases = @{$cache{$ice}};
+    }
+    else {
+	my $result = $self->Search_Cases(Query => \%query);
+	my $cases = $result->{Search_CasesResult}{SearchResults};
+	push @cases, new PCS::Case($_) foreach @$cases;
+	$cache{$ice} = \@cases;
+    }
     my $count = @cases;
     if ($from)
     {

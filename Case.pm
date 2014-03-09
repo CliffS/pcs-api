@@ -8,7 +8,6 @@ use utf8;
 use DateTime;
 use DateTime::Format::Strptime;
 use Carp;
-use Data::Dumper;
 
 sub new
 {
