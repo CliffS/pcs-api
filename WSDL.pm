@@ -19,7 +19,8 @@ sub new
     my $class = shift;
     my $token = shift;
     my $live = shift;
-    my $ua = new LWP::UserAgent;
+    my $ua = new LWP::UserAgent( ssl_opts => { verify_hostname => 0 } );
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
     my $url = $live ? URL : TESTURL;
     my $response = $ua->get($url);
     my $wsdl = new SOAP::Simple(
