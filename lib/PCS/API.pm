@@ -10,14 +10,24 @@ use utf8;
 use MIME::Base64 qw(decode_base64 encode_base64);
 use File::Basename qw(basename);
 use File::Spec;
-use Pristine::Utils qw(debug);
 use Storable qw(freeze);
 
-use Data::Dumper;
 use Carp;
 
-use CouchDB::Lite::Boolean;
+use Attribute::Boolean;
 use PCS::Case;
+
+=head1 NAME
+
+PCS::API - An interface into Private Client Solutions API
+
+=head1 VERSION
+
+Version v1.0.0;
+
+=cut
+
+our $VERSION = v1.0.0;   # Don't forget the pod above
 
 use enum qw{NONE CASE REF INSTRUCTOR NAME POSTCODE STATUS};
 
