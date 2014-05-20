@@ -1,85 +1,235 @@
-PCS-API
+NAME
+    PCS::API - An interface into Private Client Solutions API
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+VERSION
+    Version v1.0.0;
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+SYNOPSIS
+    This is a full interface to the SOAP API for Private Client Solutions
+    (PCS), a UK document collection and delivery service.
 
+        my $pcs = new PCS::API($apikey);
+        my @jobtypes = $pcs->jobtypes;  # returns a hash of name => id
+        my $jobid = $pcs->instruct(\%client, @files);
 
-INSTALLATION
+CONSTRUCTOR
+  new
+        my $pcs = new PCS::API($apikey);
 
-To install this module, run the following commands:
+    The only parameter is a string containing the secret API key as provided
+    by PCS.
 
-	perl Makefile.PL
-	make
-	make test
-	make install
+GENERAL METHODS
+    All the methods below act upon a PCS::API object constructed with new.
 
-SUPPORT AND DOCUMENTATION
+  jobtypes
+    This takes no parameters and returns a hash of the jobtypes in the form
+    of `jobtype =' jobtype_id>. The jobtype_id is used in the instruct
+    method below.
 
-After installing, you can find documentation for this module with the
-perldoc command.
+        my %jobtypes = $pcs->jobtypes;
+        my $id = $jobtypes{MYTYPE};
 
-    perldoc PCS::API
+  instruct
+    This routine instructs PCS to send a courier to a given name and address
+    at a particular time. It returns the job ID.
 
-You can also look for information at:
+        my $job_id = $pcs->instruct($client, @files);
 
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=PCS-API
+    parameters
+    $client
+        This is a hashref containing the following keys:
 
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/PCS-API
+        jobtype
+            from above, required
 
-    CPAN Ratings
-        http://cpanratings.perl.org/d/PCS-API
+        reference
+            This is our reference, required
 
-    Search CPAN
-        http://search.cpan.org/dist/PCS-API/
+        title
+            (e.g. Mr Mrs)
 
+        first_name
+            required
 
-LICENSE AND COPYRIGHT
+        surname
+            required
 
-Copyright (C) 2014 Cliff Stanford
+        telephone
+        mobile
+        email
+        address1
+            required
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of the the Artistic License (2.0). You may obtain a
-copy of the full license at:
+        address2
+        town
+            required
 
-L<http://www.perlfoundation.org/artistic_license_2_0>
+        postcode
+            formatted in the normal way, required
 
-Any use, modification, and distribution of the Standard or Modified
-Versions is governed by this Artistic License. By using, modifying or
-distributing the Package, you accept this license. Do not use, modify,
-or distribute the Package, if you do not accept this license.
+        appointment
+            this is a DateTime object. The day should be Monday to Saturday,
+            the hour must be between 8 and 20 inclusinve and the minutes
+            must be a multiple of five. It must be no earlier than 3 working
+            hours from the time instruct is called.
 
-If your Modified Version has been derived from a Modified Version made
-by someone other than you, you are nevertheless required to ensure that
-your Modified Version complies with the requirements of this license.
+    @files
+        This is an array of filenames to upload to the case. These are the
+        files that the courier will print off to take to an appointment.
 
-This license does not grant you the right to use any trademark, service
-mark, tradename, or logo of the Copyright Holder.
+    return value
+        The case ID is returned. This is the key for many of the functions
+        below.
 
-This license includes the non-exclusive, worldwide, free-of-charge
-patent license to make, have made, use, offer to sell, sell, import and
-otherwise transfer the Package with respect to any patent claims
-licensable by the Copyright Holder that are necessarily infringed by the
-Package. If you institute patent litigation (including a cross-claim or
-counterclaim) against any party alleging that the Package constitutes
-direct or contributory patent infringement, then this Artistic License
-to you shall terminate on the date that such litigation is filed.
+  download_paperwork
+    This only downloads the paperwrk that was uploaded by the courier, not
+    the original uploaded paperwork.
 
-Disclaimer of Warranty: THE PACKAGE IS PROVIDED BY THE COPYRIGHT HOLDER
-AND CONTRIBUTORS "AS IS' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
-THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE, OR NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY
-YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
-CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
-CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+        $items = $pcs->download_paperwork($id, $path);
+
+    $id This is the case ID returned by instruct.
+
+    $path
+        This is the path to whicj the files should be downloaded.
+
+    return value
+        This is the number of items downloaded.
+
+  cancel
+        $pcs->cancel($id);
+
+    This is used to cancel a case. It is passed the case ID returned from
+    instruct. There is no return value, the call croaks on error.
+
+SEARCH METHODS
+    All the search methods take a similar format. They all return eith a
+    single case or an array of cases. Each case is an instance of PCS::Case.
+
+    Where an array of PCS::Case is returned, it will be in order of
+    appointment time. Most of the search functions can take an optional
+    start and end. These are `DateTime' objects limiting the earliest and
+    optionally the latest appointment times for the cases returned.
+
+  get_case
+        my $case = $pcs->get_case($id);
+
+    This returns a single PCS::Case for the given ID or `undef' if not
+    found.
+
+  get_by_ref
+        my @cases = $pcs->get_by_ref($reference);
+
+    This returns an array of PCS::Case as there is no restriction on
+    duplicate references.
+
+  get_by_postcode
+        my @cases = $pcs->get_by_postcode($postcode);
+
+    This takes a formatted postcode and returns an array of PCS::Case.
+
+  get_all_cases
+        my @cases = $pcs->get_all_cases([$start [,$end]]);
+
+    This returns all cases, all cases after $start (a `DateTime') or all
+    cases between $start and $end inclusive.
+
+  get_by_status
+        my @cases = $pcs->get_by_status($status [,$start [, $end]]);
+
+    Gets all the cases in range with a particular status. See "PCS STATUSES"
+    below for a full list of statuses.
+
+  get_complete
+        my @cases = $pcs->get_complete([$start [, $end]]);
+
+    Gets all cases in range that are complete. Complete means that the
+    paperwork has been returned and a tracking number is available.
+
+  get_pending
+        my @cases = $pcs->get_pending([$start [,$end]]);
+
+    Gets all pending cases (i.e. not complete, not signed and not failed).
+
+  get_signed
+        my @cases = $pcs->get_signed([$start [,$end]]);
+
+    Gets all signed cases. This reurns all cases that have been successfully
+    signed. The paperwork may not yet be available.
+
+  get_failed
+        my @cases = $pcs->get_failed([$start [,$end]]);
+
+    Gets all failed cases, irrespective of the reason.
+
+  get_by_jobtype
+        my @cases = $pcs->get_by_jobtype($jobtype_id [, $start, [, $end]]);
+
+    Get all cases for a particular jobtype ID.
+
+PCS STATUSES
+    The following is a full list of the raw statuses provided by the PCS
+    API.
+
+    TBA To be allocated - Your appointment has been successfully added to
+        our portal and we are in the process of allocating a field agent to
+        attend. ALLOCATED Your appointment has been allocated to one of our
+        field agents and will be attended on the specified date and time.
+
+    SIGNED
+        Your appointment has been attened by our filed agent and the client
+        has signed the documentation. UPLOADED Our field agent has uploaded
+        scanned copies of the documentation that was completed on the
+        appointment.
+
+    COMPLETE
+        Our field agent has posted the documentation and has added a Royal
+        Mail tracking number for your reference.
+
+    CANX_AT
+        The client was not in when our agent attended the appointment.
+
+    CANX_B4<60
+        The appointment has been cancelled less than 60 minutes prior to the
+        appointment time.
+
+    CANX_B4>60
+        The appointment has been cancelled more than 60 minutes prior to the
+        appointment time.
+
+    REFUSED
+        Our field agent attended your appointmetn but the customer was
+        unwilling to sign or complete your documentation.
+
+    PROBLEM
+        This status is used by our internal team if they are struggling to
+        find an agent to attend your appointment. You don't need to do
+        anything, our internal team will contact you if we require any
+        assistance
+
+EXPORTS
+    Nothing.
+
+BUGS
+    This is fairly untested code. Expect bugs.
+
+    Also the calls to the cancel and download_paperwork entries elsewhere in
+    this document should probably be calls on a single case. Logically then,
+    instruct should return a PCS::Case rather than a case ID.
+
+SEE ALSO
+    PCS::Case - and individual case returned by the search functions.
+
+AUTHOR INFORMATION
+    Cliff Stanford `<cliff@may.be>'
+
+SOURCE REPOSITORY
+    The source is maintained at a public Github repository at
+    https://github.com/CliffS/pcs-api.
+
+LICENCE AND COPYRIGHT
+    Copyright © 2014, Cliff Stanford `<cliff@may.be>'. All rights reserved.
+
+    This module is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
 

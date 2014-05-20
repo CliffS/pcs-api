@@ -17,6 +17,8 @@ use Carp;
 use Attribute::Boolean;
 use PCS::Case 1.0.0;
 
+=encoding utf8
+
 =head1 NAME
 
 PCS::API - An interface into Private Client Solutions API
@@ -216,6 +218,8 @@ This only downloads the paperwrk that was uploaded by the
 courier, not the original uploaded paperwork.
 
     $items = $pcs->download_paperwork($id, $path);
+
+=over
 
 =item $id
 
@@ -566,7 +570,7 @@ Also the calls to L</cancel> and L</download_paperwork> should
 probably be calls on a single case.  Logically then, L</instruct>
 should return a L<PCS::Case> rather than a case ID.
 
-SEE ALSO
+=head1 SEE ALSO
 
 L<PCS::Case> - and individual case returned by the search functions.
 
@@ -579,12 +583,14 @@ Cliff Stanford C<< <cliff@may.be> >>
 The source is maintained at a public Github repository at
 L<https://github.com/CliffS/pcs-api>.
 
-=head1 LICENCE AND COPYWRITE
+=head1 LICENCE AND COPYRIGHT
 
 Copyright © 2014, Cliff Stanford C<< <cliff@may.be> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
+
+=cut
 
 1;

@@ -9,6 +9,8 @@ use DateTime;
 use DateTime::Format::Strptime;
 use Carp;
 
+=encoding utf8
+
 =head1 NAME
 
 PCS::Case - represents a single case in the PCS::API module
@@ -205,7 +207,7 @@ Nothing.
 
 =head1 SEE ALSO
 
-See L<PCS::API> for copywrite and all other information.
+See L<PCS::API> for copyright and all other information.
 
 =cut
 
