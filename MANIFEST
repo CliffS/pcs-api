@@ -7,8 +7,6 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 README
 README.md
-MYMETA.json
-MYMETA.yml
 t/00-load.t
 t/manifest.t
 t/pod-coverage.t
