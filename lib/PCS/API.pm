@@ -15,7 +15,7 @@ use Storable qw(freeze);
 use Carp;
 
 use Attribute::Boolean;
-use PCS::Case;
+use PCS::Case 1.0.0;
 
 =head1 NAME
 
@@ -29,7 +29,7 @@ Version v1.0.0;
 
 our $VERSION = v1.0.0;   # Don't forget the pod above
 
-=head1 SYNOPSYS
+=head1 SYNOPSIS
 
 This is a full interface to the SOAP API for Private Client Solutions
 (PCS), a UK document collection and delivery service.
@@ -398,7 +398,7 @@ sub get_all_cases
     my @cases = $pcs->get_by_status($status [,$start [, $end]]);
 
 Gets all the cases in range with a particular status.  See
-L</PCS STATUSES> below for a full list of statuses.
+L</"PCS STATUSES"> below for a full list of statuses.
 
 =cut
 
